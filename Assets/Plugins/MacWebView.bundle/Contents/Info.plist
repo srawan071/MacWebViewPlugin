@@ -7,13 +7,13 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>MacWebViewPlugin</string>
+	<string>MacWebView</string>
 	<key>CFBundleIdentifier</key>
 	<string>Alter-Learning-Educational-Platform-Inc.MacWebViewPlugin</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>MacWebViewPlugin</string>
+	<string>MacWebView</string>
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>

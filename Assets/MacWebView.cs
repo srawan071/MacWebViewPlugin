@@ -1,79 +1,76 @@
-using System;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
 public class MacWebView : MonoBehaviour
 {
-    // Declare the DLL import (native plugin)
-    private const string DLL_NAME = "MacWebViewPlugin";  // The .dylib file generated from your macOS plugin
+    private const string DLL_NAME = "MacWebView";
 
-    // Unity callback to log messages
-    [DllImport(DLL_NAME)]
-    private static extern void setUnityLoggerCallback(Action<string> callback);
+    [DllImport(DLL_NAME, EntryPoint = "InitializeWebView")]
+    private static extern void InitializeWebView();
 
-    // Native function to initialize the WebView
-    [DllImport(DLL_NAME)]
-    private static extern void initializeWebView();
+    [DllImport(DLL_NAME, EntryPoint = "SetWebViewFrame")]
+    private static extern void SetWebViewFrame(float x, float y, float width, float height);
 
-    // Native function to load a URL in the WebView
-    [DllImport(DLL_NAME)]
-    private static extern void loadWebViewURL(string url);
+    [DllImport(DLL_NAME, EntryPoint = "LoadURL")]
+    private static extern void LoadURL(string url);
 
-    // Native function to render WebView content to a texture
-    [DllImport(DLL_NAME)]
-    private static extern void renderWebViewToTexture();
+    [DllImport(DLL_NAME, EntryPoint = "DestroyWebView")]
+    private static extern void DestroyWebView();
 
     [DllImport(DLL_NAME)]
-    private static extern void destroyWebView();
+    private static extern void SetMaskView(float leftMargin, float topMargin, float rightMargin, float bottomMargin, bool visibleMask);
 
+    [DllImport(DLL_NAME)]
+    private static extern void AddCustomHeader(string headerKey, string headerValue);
 
-    // The texture that we will apply to the Unity material
-    private RenderTexture renderTexture;
+    public RectTransform webViewRectTransform; // The RectTransform defining the WebView's size and position
+    public string url = "https://connect.alter-learning.com/members/srawan071/create-event/"; // URL to load
 
-    public Material mat;
-
-    // Start is called before the first frame update
+    private bool isWebViewInitialized;
+    public float x, y, width, height;
+    public Vector4 Mask;
+    public bool VisibleMask;
+    private string token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Nvbm5lY3QuYWx0ZXItbGVhcm5pbmcuY29tIiwiaWF0IjoxNzM3OTI5MzM1LCJuYmYiOjE3Mzc5MjkzMzUsImV4cCI6MTczODUzNDEzNSwiZGF0YSI6eyJ1c2VyIjp7ImlkIjoiNTk1In19fQ.rtuwNYGBRkfOk9bnoEgQjJ8WJTYraOCS9lb_-BV_sVA";
     void Start()
     {
-        // Set Unity logger callback to print logs from the native plugin
-        setUnityLoggerCallback(LogMessageFromNative);
-
-        // Initialize the WebView
-        initializeWebView();
-
-        // Create a RenderTexture to display the WebView content
-        renderTexture = new RenderTexture(1024/2, 768/2, 24);
-        renderTexture.Create();
-
-        // Set the RenderTexture on the material of a Quad (for example)
-        mat.mainTexture = renderTexture;
-
-        // Load a URL into the WebView
-        loadWebViewURL("https://www.youtube.com");
+        Debug.Log("Initializing WebView...");
+        InitializeWebView(); // Initialize the WebView
+        isWebViewInitialized = true;
+        UpdateWebViewFrame();
+        Debug.Log($"Loading URL: {url}");
+        AddCustomHeader("Authorization", "Bearer " +token);
+        LoadURL(url); // Load the URL
     }
-
-    // Update is called once per frame
+    
     void Update()
     {
-        // Capture WebView content and render it to the Unity texture
-        renderWebViewToTexture();
+        if (Input.GetKeyDown(KeyCode.Space)) // For debugging, update frame when space is pressed
+        {
+            UpdateWebViewFrame();
+            UpdateMask();
+        }
     }
 
-    // Log messages from the native code
-    private void LogMessageFromNative(string message)
+    void UpdateWebViewFrame()
     {
-        Debug.Log("Native: " + message);
+        
+        
+        Debug.Log($"Setting WebView Frame: X={x}, Y={y}, Width={width}, Height={height}");
+        SetWebViewFrame(x, y, width, height); // Set the WebView's position and size
+    }
+   void UpdateMask()
+    {
+        Debug.Log($" Update Mask {Mask}");
+         SetMaskView(Mask.x,Mask.y,Mask.z,Mask.w,VisibleMask);
     }
 
-    // Call this to clean up and destroy the WebView when no longer needed
-    public void CleanupWebView()
+    void OnDestroy()
     {
-        destroyWebView();
-    }
-
-    // Ensure cleanup when the object is destroyed
-    private void OnDestroy()
-    {
-        CleanupWebView();
+        if (isWebViewInitialized)
+        {
+            Debug.Log("Destroying WebView...");
+            DestroyWebView(); // Destroy WebView when application closes
+            isWebViewInitialized = false;
+        }
     }
 }
