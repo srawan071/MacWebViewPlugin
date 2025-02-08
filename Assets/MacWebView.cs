@@ -1,5 +1,50 @@
 using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEditor;
+using System.Reflection;
+using System;
+
+
+public static class MyScreen
+{
+    public static int Width
+    {
+#if UNITY_EDITOR
+        
+        get => (int) MacWebView.CheckGameViewPositionAndSize().size.x;
+#else
+        get => Screen.width;
+#endif
+    }
+
+    public static int Height
+    {
+#if UNITY_EDITOR
+
+        get => (int)MacWebView.CheckGameViewPositionAndSize().size.y;
+#else
+        get => Screen.height;
+#endif
+    }
+    public static int PosX
+    {
+#if UNITY_EDITOR
+
+        get => (int)MacWebView.CheckGameViewPositionAndSize().x;
+#else
+get=>100;
+#endif
+    }
+    public static int PosY
+    {
+#if UNITY_EDITOR
+
+        get => (int)MacWebView.CheckGameViewPositionAndSize().y;
+#else
+get=>100;
+#endif
+    }
+}
 
 public class MacWebView : MonoBehaviour
 {
@@ -46,17 +91,26 @@ public class MacWebView : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space)) // For debugging, update frame when space is pressed
         {
+            MatchTextureSizeToRectTransform(webViewRectTransform);
             UpdateWebViewFrame();
            // UpdateMask();
-            MatchTextureSizeToRectTransform(webViewRectTransform);
+           
         }
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+#if UNITY_EDITOR
+            CheckGameViewPositionAndSize();
+            UpdateWebViewFrame();
+#endif
+        }
+        
     }
 
     void UpdateWebViewFrame()
     {
-        
-        
-        Debug.Log($"Setting WebView Frame: X={x}, Y={y}, Width={width}, Height={height}");
+
+       
+       Debug.Log($"Setting WebView Frame: X={x}, Y={y}, Width={width}, Height={height}");
         SetWebViewFrame(x, y, width, height); // Set the WebView's position and size
     }
    void UpdateMask()
@@ -129,7 +183,7 @@ public class MacWebView : MonoBehaviour
         //  scaleFactor = 1f / GetCanvasRelativeLocalScale(rectTransform).x;
         Vector2 scale = rectTransform.rect.size * GetCanvasRelativeLocalScale(rectTransform);
         Vector2 center = GetCanvasRelativeLocalPosition(rectTransform) / scaleFactor;
-        Debug.Log("Only Scale is " + scale);
+     //   Debug.Log("Only Scale is " + scale);
 
         Debug.Log("Final Scale Factor is " + scaleFactor + "Canter" + center + " EffectiveScale" + GetCanvasRelativeLocalScale(rectTransform));
         SetCenterPositionWithScale(center, scale / scaleFactor);
@@ -138,6 +192,7 @@ public class MacWebView : MonoBehaviour
     // NOTE: for historical reasons, `center` means the lower left corner and positive y values extend up.
     public void SetCenterPositionWithScale(Vector2 center, Vector2 scale)
     {
+        Debug.Log("Scale is ...." + scale);
 #if UNITY_WEBPLAYER || UNITY_WEBGL
         //TODO: UNSUPPORTED
 #elif UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_LINUX
@@ -145,20 +200,53 @@ public class MacWebView : MonoBehaviour
 #else
         Vector2 Screen = new Vector2(1920, 1080);
         Screen = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
+
         float left = (Screen.x - scale.x) / 2.0f + center.x;
         float right = Screen.x - (left + scale.x);
         float bottom = (Screen.y - scale.y) / 2.0f + center.y;
         float top = Screen.y - (bottom + scale.y);
-        Debug.Log(" Size is " + scale);
+      //  Debug.Log(" Size is " + scale);
         Debug.Log($" Margins left{left} top{top} right{right} bottom{bottom}");
-        SetMargins((int)left, (int)top, (int)right, (int)bottom);
+
+#if UNITY_EDITOR
+        Screen = new Vector2(1920, 1080);
+        Vector2 Screenorg = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
+        Screen = new Vector2(MyScreen.Width, MyScreen.Height);
+       
+        Vector2 scaleMultiplayer =  Screen/Screenorg;
+          scale = scale * scaleMultiplayer;
+         left = left * scaleMultiplayer.x+ MyScreen.PosX;
+         bottom = bottom * scaleMultiplayer.y + MyScreen.PosY;
+
+       // scale = new Vector2(MyScreen.Width, MyScreen.Height);
+       // left = MyScreen.PosX;
+        //bottom = MyScreen.PosY;
+      
+#endif
+        x = left;
+        y = bottom;
+        this.width = scale.x;
+        this.height = scale.y;
+
+        // SetMargins((int)left, (int)top, (int)right, (int)bottom);
 #endif
     }
+    
 
+
+    /*
     public void SetMargins(int left, int top, int right, int bottom, bool relative = false)
     {
         Vector2 Screen = new Vector2(1920, 1080);
-        Screen = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
+       Vector2  Screenorg = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
+        Screen = new Vector2(MyScreen.Width, MyScreen.Height);
+        Screen = Screenorg;
+      //  Debug.Log(" Before Screen org= " + Screenorg + "Screen =" + Screen);
+        Vector2 scaleMultiplayer = Screen/Screenorg;
+       // Screen = Screen * scaleMultiplayer;
+       // Debug.Log(" After Screen org= " + Screenorg + "Screen =" + Screen + " ScaleMultiplayer=" + scaleMultiplayer);
+
+
         int width = (int)(Screen.x - (left + right));
         int height = (int)(Screen.y - (bottom + top));
        
@@ -171,4 +259,128 @@ public class MacWebView : MonoBehaviour
         this.height = height;
         
     }
+    */
+
+#if UNITY_EDITOR
+    public static Rect CheckGameViewPositionAndSize()
+    {
+        Rect finalRect = new Rect();
+        var gameViewType = System.Type.GetType("UnityEditor.GameView,UnityEditor");
+       // gameViewType = System.Type.GetType("UnityEditor.PlayModeView,UnityEditor");
+        var gameView = EditorWindow.GetWindow(gameViewType);
+
+        if (gameView != null)
+        {
+            //Type gameViewType = gameView.GetType();
+            var targetSizeProperty = gameViewType.GetProperty("targetSize", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (targetSizeProperty == null)
+            {
+                Debug.LogError("Failed to access Game Viewport size!");
+                return finalRect;
+            }
+            Vector2 targetSize = (Vector2)targetSizeProperty.GetValue(gameView);
+
+            // Calculate the aspect ratio of the Game View
+            float aspectRatio = targetSize.x / targetSize.y;
+           // Debug.Log(" Target size =" + targetSize + " Aspect ratio =+" + aspectRatio);
+
+
+
+            Rect gameViewRect = gameView.position;
+
+            // Fix DPI Scaling Issues
+            float scale = EditorGUIUtility.pixelsPerPoint;
+            Debug.Log("DPI SCALE IS+"+ scale);
+
+            float adjustedX = gameViewRect.x * scale;
+            float adjustedY = gameViewRect.y * scale;
+            float adjustedWidth = gameViewRect.width * scale;
+            float adjustedHeight = gameViewRect.height * scale;
+
+            // Fix Bottom-Left Position
+            float editorHeight = EditorGUIUtility.GetMainWindowPosition().height;
+            adjustedY= editorHeight - (adjustedY + adjustedHeight);
+            Vector2 editorPos = EditorGUIUtility.GetMainWindowPosition().position;
+
+
+            float yPadding = 20;
+           
+            adjustedHeight -= yPadding;
+            adjustedX -= editorPos.x -1;
+            adjustedY += editorPos.y - yPadding;
+
+
+            Vector2 renderedSize = GetGameViewRenderedSize(adjustedWidth, adjustedHeight, aspectRatio);
+          // renderedSize = new Vector2(adjustedWidth, adjustedHeight);
+
+            // Now, calculate the offsets to center the rendered view
+            float centerX = adjustedX + (adjustedWidth - renderedSize.x) / 2;
+            float centerY = adjustedY + (adjustedHeight - renderedSize.y) / 2;
+
+            finalRect = new Rect(new Vector2(centerX, centerY), renderedSize);
+            return finalRect;
+            
+        }
+        else
+        {
+            Debug.LogError("Game View window not found!");
+        }
+
+        return finalRect;
     }
+
+
+    static Vector2 GetGameViewRenderedSize(float width, float height, float aspectRatio)
+    {
+
+        Vector2 renderedSize = Vector2.zero;
+         renderedSize.x = height * aspectRatio; // Rendered width based on aspect ratio
+         renderedSize.y = height; // Height remains the same
+
+        // Check if the rendered width exceeds the Game View width
+        if (renderedSize.x > width)
+        {
+            // If the rendered width exceeds, we adjust the height based on the width
+            renderedSize.x = width;
+            renderedSize.y = width / aspectRatio;
+        }
+
+       
+       UnityEditor.PlayModeWindow. GetRenderingResolution(out uint widthX, out uint heightY);
+        Vector2 playmoderect = new Vector2(widthX, heightY);
+        Vector2 scale = new Vector2(width, height) / playmoderect;
+        Vector2 HandleSize = Handles.GetMainGameViewSize();
+
+        Vector2 newScale = GetGameViewScale();
+        Vector2 afterScale = HandleSize * newScale;
+       Debug.Log(" Playmode Window is +" + playmoderect+ " renderSize ="+ renderedSize +"Scale "+scale+ "Handle Size"+ HandleSize+ " After scale "+afterScale);
+
+        renderedSize = afterScale;
+        return renderedSize;
+    }
+    public static Vector2 GetGameViewScale()
+    {
+        Vector2 scale = Vector2.zero;
+        var gameViewType = System.Type.GetType("UnityEditor.GameView,UnityEditor");
+        if (gameViewType == null) return scale;
+
+        var gameView = EditorWindow.GetWindow(gameViewType);
+        if (gameView == null) return scale;
+
+        var zoomAreaField = gameViewType.GetField("m_ZoomArea", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (zoomAreaField == null) return scale;
+
+        var zoomArea = zoomAreaField.GetValue(gameView);
+        if (zoomArea == null) return scale;
+
+        var scaleProperty = zoomArea.GetType().GetProperty("scale", BindingFlags.Public | BindingFlags.Instance);
+        if (scaleProperty == null) return
+                scale;
+
+         scale = (Vector2)scaleProperty.GetValue(zoomArea);
+        Debug.Log("Game View Scale: " + scale);
+        return scale;
+    }
+#endif
+
+}
