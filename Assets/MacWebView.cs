@@ -7,39 +7,39 @@ using System;
 
 public static class MyScreen
 {
-    public static int Width
+    public static float Width
     {
 #if UNITY_EDITOR
         
-        get => (int) MacWebView.CheckGameViewPositionAndSize().size.x;
+        get => MacWebView.CheckGameViewPositionAndSize().size.x;
 #else
         get => Screen.width;
 #endif
     }
 
-    public static int Height
+    public static float Height
     {
 #if UNITY_EDITOR
 
-        get => (int)MacWebView.CheckGameViewPositionAndSize().size.y;
+        get => MacWebView.CheckGameViewPositionAndSize().size.y;
 #else
         get => Screen.height;
 #endif
     }
-    public static int PosX
+    public static float PosX
     {
 #if UNITY_EDITOR
 
-        get => (int)MacWebView.CheckGameViewPositionAndSize().x;
+        get => MacWebView.CheckGameViewPositionAndSize().x;
 #else
 get=>100;
 #endif
     }
-    public static int PosY
+    public static float PosY
     {
 #if UNITY_EDITOR
 
-        get => (int)MacWebView.CheckGameViewPositionAndSize().y;
+        get => MacWebView.CheckGameViewPositionAndSize().y;
 #else
 get=>100;
 #endif
@@ -93,7 +93,7 @@ public class MacWebView : MonoBehaviour
         {
             MatchTextureSizeToRectTransform(webViewRectTransform);
             UpdateWebViewFrame();
-           // UpdateMask();
+            UpdateMask();
            
         }
         if (Input.GetKeyDown(KeyCode.M))
@@ -115,7 +115,16 @@ public class MacWebView : MonoBehaviour
     }
    void UpdateMask()
     {
-        Debug.Log($" Update Mask {Mask}");
+        Rect editorWindowRect = GetEditorWindowRect();
+        Debug.Log(" Editor Window rect"+ editorWindowRect);
+        Rect gameViewRect = CheckGameViewPositionAndSize();
+        Mask.x = gameViewRect.x;
+        Mask.y = gameViewRect.y;
+        Mask.z = editorWindowRect.size.x - (gameViewRect.size.x+ Mask.x);
+        Mask.w = editorWindowRect.size.y-(gameViewRect.size.y+Mask.y);
+        Debug.Log("Ediotr.x " + editorWindowRect.size.x);
+         Debug.Log($" Update Mask {Mask}");
+        Mask += Vector4.one * 50;
          SetMaskView(Mask.x,Mask.y,Mask.z,Mask.w,VisibleMask);
     }
 
@@ -183,30 +192,33 @@ public class MacWebView : MonoBehaviour
         //  scaleFactor = 1f / GetCanvasRelativeLocalScale(rectTransform).x;
         Vector2 scale = rectTransform.rect.size * GetCanvasRelativeLocalScale(rectTransform);
         Vector2 center = GetCanvasRelativeLocalPosition(rectTransform) / scaleFactor;
-     //   Debug.Log("Only Scale is " + scale);
-
-        Debug.Log("Final Scale Factor is " + scaleFactor + "Canter" + center + " EffectiveScale" + GetCanvasRelativeLocalScale(rectTransform));
-        SetCenterPositionWithScale(center, scale / scaleFactor);
+        //   Debug.Log("Only Scale is " + scale);
+        Vector2 pivot = rectTransform.pivot;
+        Debug.Log("Final Scale Factor is " + scaleFactor + "Canter" + center + " EffectiveScale" + GetCanvasRelativeLocalScale(rectTransform)+ "Piviot is: "+ pivot);
+        SetCenterPositionWithScale(center, scale / scaleFactor, pivot);
     }
     // Use this function instead of SetMargins to easily set up a centered window
     // NOTE: for historical reasons, `center` means the lower left corner and positive y values extend up.
-    public void SetCenterPositionWithScale(Vector2 center, Vector2 scale)
+    public void SetCenterPositionWithScale(Vector2 center, Vector2 scale, Vector2 pivot)
     {
-        Debug.Log("Scale is ...." + scale);
-#if UNITY_WEBPLAYER || UNITY_WEBGL
-        //TODO: UNSUPPORTED
-#elif UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || UNITY_EDITOR_LINUX
-        //TODO: UNSUPPORTED
-#else
+        
         Vector2 Screen = new Vector2(1920, 1080);
         Screen = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
 
-        float left = (Screen.x - scale.x) / 2.0f + center.x;
+        Vector2 screenSize = Screen;
+
+
+        float left = (Screen.x - scale.x) / 2 + center.x;
         float right = Screen.x - (left + scale.x);
-        float bottom = (Screen.y - scale.y) / 2.0f + center.y;
+        float bottom = (Screen.y - scale.y) / 2 + center.y;
         float top = Screen.y - (bottom + scale.y);
-      //  Debug.Log(" Size is " + scale);
-        Debug.Log($" Margins left{left} top{top} right{right} bottom{bottom}");
+        Debug.Log("Left before" + left+ "Bottom "+bottom);
+
+        left += (0.5f - pivot.x)*scale.x;
+        bottom += (0.5f - pivot.y) * scale.y;
+        Debug.Log("Left After" + left + "Bottom " + bottom);
+
+        //  Debug.Log($" Margins left{left} top{top} right{right} bottom{bottom} center{center} scale{scale} pivot {pivot}");
 
 #if UNITY_EDITOR
         Screen = new Vector2(1920, 1080);
@@ -229,10 +241,14 @@ public class MacWebView : MonoBehaviour
         this.height = scale.y;
 
         // SetMargins((int)left, (int)top, (int)right, (int)bottom);
-#endif
+
     }
     
+    Vector2 GetPivot(RectTransform rectTransform)
+    {
+        return rectTransform.pivot;
 
+    }
 
     /*
     public void SetMargins(int left, int top, int right, int bottom, bool relative = false)
@@ -290,7 +306,7 @@ public class MacWebView : MonoBehaviour
 
             // Fix DPI Scaling Issues
             float scale = EditorGUIUtility.pixelsPerPoint;
-            Debug.Log("DPI SCALE IS+"+ scale);
+           // Debug.Log("DPI SCALE IS+"+ scale);
 
             float adjustedX = gameViewRect.x * scale;
             float adjustedY = gameViewRect.y * scale;
@@ -306,7 +322,7 @@ public class MacWebView : MonoBehaviour
             float yPadding = 20;
            
             adjustedHeight -= yPadding;
-            adjustedX -= editorPos.x -1;
+            adjustedX -= editorPos.x -1+1;
             adjustedY += editorPos.y - yPadding;
 
 
@@ -316,8 +332,11 @@ public class MacWebView : MonoBehaviour
             // Now, calculate the offsets to center the rendered view
             float centerX = adjustedX + (adjustedWidth - renderedSize.x) / 2;
             float centerY = adjustedY + (adjustedHeight - renderedSize.y) / 2;
-
+            
             finalRect = new Rect(new Vector2(centerX, centerY), renderedSize);
+
+             
+
             return finalRect;
             
         }
@@ -353,7 +372,7 @@ public class MacWebView : MonoBehaviour
 
         Vector2 newScale = GetGameViewScale();
         Vector2 afterScale = HandleSize * newScale;
-       Debug.Log(" Playmode Window is +" + playmoderect+ " renderSize ="+ renderedSize +"Scale "+scale+ "Handle Size"+ HandleSize+ " After scale "+afterScale);
+    //   Debug.Log(" Playmode Window is +" + playmoderect+ " renderSize ="+ renderedSize +"Scale "+scale+ "Handle Size"+ HandleSize+ " After scale "+afterScale);
 
         renderedSize = afterScale;
         return renderedSize;
@@ -378,8 +397,30 @@ public class MacWebView : MonoBehaviour
                 scale;
 
          scale = (Vector2)scaleProperty.GetValue(zoomArea);
-        Debug.Log("Game View Scale: " + scale);
+      //  Debug.Log("Game View Scale: " + scale);
         return scale;
+    }
+  private  Rect GetEditorWindowRect()
+    {
+        Type containerWindowType = Type.GetType("UnityEditor.ContainerWindow,UnityEditor");
+        if (containerWindowType == null) return new Rect(0, 0, 0, 0);
+
+        FieldInfo showModeField = containerWindowType.GetField("m_ShowMode", BindingFlags.NonPublic | BindingFlags.Instance);
+        PropertyInfo positionProperty = containerWindowType.GetProperty("position", BindingFlags.Public | BindingFlags.Instance);
+
+        if (showModeField == null || positionProperty == null) return new Rect(0, 0, 0, 0);
+
+        object[] windows = Resources.FindObjectsOfTypeAll(containerWindowType);
+        foreach (object window in windows)
+        {
+            int showMode = (int)showModeField.GetValue(window);
+            if (showMode == 4) // 4 corresponds to the main Unity Editor window
+            {
+                return (Rect)positionProperty.GetValue(window, null);
+            }
+        }
+
+        return new Rect(0, 0, 0, 0);
     }
 #endif
 
