@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEditor;
 using System.Reflection;
 using System;
-
+using System.Collections;
 
 public static class MyScreen
 {
@@ -85,23 +85,31 @@ public class MacWebView : MonoBehaviour
         Debug.Log($"Loading URL: {url}");
         //AddCustomHeader("Authorization", "Bearer " + token );
         LoadURL(url); // Load the URL
+        StartCoroutine(Updatee());
     }
     
-    void Update()
+    IEnumerator Updatee()
     {
-        if (Input.GetKeyDown(KeyCode.Space)) // For debugging, update frame when space is pressed
+        while (true)
         {
-            MatchTextureSizeToRectTransform(webViewRectTransform);
-            UpdateWebViewFrame();
-            UpdateMask();
-           
-        }
-        if (Input.GetKeyDown(KeyCode.M))
-        {
+         
+            if (Input.GetKeyDown(KeyCode.Space)) // For debugging, update frame when space is pressed
+            {
+                MatchTextureSizeToRectTransform(webViewRectTransform);
+                yield return new WaitForSeconds(2);
+                UpdateWebViewFrame();
+                //  UpdateMask();
+
+            }
+            if (Input.GetKeyDown(KeyCode.M))
+            {
 #if UNITY_EDITOR
-            CheckGameViewPositionAndSize();
-            UpdateWebViewFrame();
+                CheckGameViewPositionAndSize();
+                yield return new WaitForSeconds(2);
+                UpdateWebViewFrame();
 #endif
+            }
+            yield return null;
         }
         
     }
@@ -115,6 +123,7 @@ public class MacWebView : MonoBehaviour
     }
    void UpdateMask()
     {
+#if UNITY_EDITOR
         Rect editorWindowRect = GetEditorWindowRect();
         Debug.Log(" Editor Window rect"+ editorWindowRect);
         Rect gameViewRect = CheckGameViewPositionAndSize();
@@ -126,6 +135,7 @@ public class MacWebView : MonoBehaviour
          Debug.Log($" Update Mask {Mask}");
         Mask += Vector4.one * 50;
          SetMaskView(Mask.x,Mask.y,Mask.z,Mask.w,VisibleMask);
+#endif
     }
 
     void OnDestroy()
@@ -196,6 +206,7 @@ public class MacWebView : MonoBehaviour
         Vector2 pivot = rectTransform.pivot;
         Debug.Log("Final Scale Factor is " + scaleFactor + "Canter" + center + " EffectiveScale" + GetCanvasRelativeLocalScale(rectTransform)+ "Piviot is: "+ pivot);
         SetCenterPositionWithScale(center, scale / scaleFactor, pivot);
+
     }
     // Use this function instead of SetMargins to easily set up a centered window
     // NOTE: for historical reasons, `center` means the lower left corner and positive y values extend up.
