@@ -78,6 +78,12 @@ public class MacWebView : MonoBehaviour
     
     void Start()
     {
+        Rect editorWindowRect = GetEditorWindowRect();
+        Debug.Log(" Editor Window rect" + editorWindowRect);
+
+        Debug.Log("Editor Window 2 " + EditorGUIUtility.GetMainWindowPosition());
+
+
         Debug.Log("Initializing WebView...");
         InitializeWebView(); // Initialize the WebView
         isWebViewInitialized = true;
@@ -85,31 +91,28 @@ public class MacWebView : MonoBehaviour
         Debug.Log($"Loading URL: {url}");
         //AddCustomHeader("Authorization", "Bearer " + token );
         LoadURL(url); // Load the URL
-        StartCoroutine(Updatee());
+        
     }
     
-    IEnumerator Updatee()
+   void Update()
     {
-        while (true)
-        {
          
             if (Input.GetKeyDown(KeyCode.Space)) // For debugging, update frame when space is pressed
             {
                 MatchTextureSizeToRectTransform(webViewRectTransform);
-                yield return new WaitForSeconds(2);
+              
                 UpdateWebViewFrame();
-                //  UpdateMask();
+                // UpdateMask();
 
             }
             if (Input.GetKeyDown(KeyCode.M))
             {
 #if UNITY_EDITOR
                 CheckGameViewPositionAndSize();
-                yield return new WaitForSeconds(2);
+               
                 UpdateWebViewFrame();
 #endif
-            }
-            yield return null;
+            
         }
         
     }
@@ -131,7 +134,7 @@ public class MacWebView : MonoBehaviour
         Mask.y = gameViewRect.y;
         Mask.z = editorWindowRect.size.x - (gameViewRect.size.x+ Mask.x);
         Mask.w = editorWindowRect.size.y-(gameViewRect.size.y+Mask.y);
-        Debug.Log("Ediotr.x " + editorWindowRect.size.x);
+      //  Debug.Log("Ediotr.x " + editorWindowRect.size.x);
          Debug.Log($" Update Mask {Mask}");
         Mask += Vector4.one * 50;
          SetMaskView(Mask.x,Mask.y,Mask.z,Mask.w,VisibleMask);
@@ -229,11 +232,12 @@ public class MacWebView : MonoBehaviour
         bottom += (0.5f - pivot.y) * scale.y;
         Debug.Log("Left After" + left + "Bottom " + bottom);
 
-        //  Debug.Log($" Margins left{left} top{top} right{right} bottom{bottom} center{center} scale{scale} pivot {pivot}");
+        Debug.Log($" Margins left{left} top{top} right{right} bottom{bottom} center{center} scale{scale} pivot {pivot}");
 
 #if UNITY_EDITOR
         Screen = new Vector2(1920, 1080);
         Vector2 Screenorg = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
+
         Screen = new Vector2(MyScreen.Width, MyScreen.Height);
        
         Vector2 scaleMultiplayer =  Screen/Screenorg;
@@ -317,7 +321,7 @@ public class MacWebView : MonoBehaviour
 
             // Fix DPI Scaling Issues
             float scale = EditorGUIUtility.pixelsPerPoint;
-           // Debug.Log("DPI SCALE IS+"+ scale);
+            Debug.Log("DPI SCALE IS+"+ scale);
 
             float adjustedX = gameViewRect.x * scale;
             float adjustedY = gameViewRect.y * scale;
@@ -346,8 +350,8 @@ public class MacWebView : MonoBehaviour
             
             finalRect = new Rect(new Vector2(centerX, centerY), renderedSize);
 
-             
 
+           // Debug.Log(" Final rect is" + finalRect);
             return finalRect;
             
         }
@@ -383,7 +387,7 @@ public class MacWebView : MonoBehaviour
 
         Vector2 newScale = GetGameViewScale();
         Vector2 afterScale = HandleSize * newScale;
-    //   Debug.Log(" Playmode Window is +" + playmoderect+ " renderSize ="+ renderedSize +"Scale "+scale+ "Handle Size"+ HandleSize+ " After scale "+afterScale);
+       Debug.Log(" Playmode Window is +" + playmoderect+ " renderSize ="+ renderedSize +"Scale "+scale+ "Handle Size"+ HandleSize+ " After scale "+afterScale);
 
         renderedSize = afterScale;
         return renderedSize;
