@@ -78,11 +78,12 @@ public class MacWebView : MonoBehaviour
     
     void Start()
     {
+# if UNITY_EDITOR
         Rect editorWindowRect = GetEditorWindowRect();
         Debug.Log(" Editor Window rect" + editorWindowRect);
 
         Debug.Log("Editor Window 2 " + EditorGUIUtility.GetMainWindowPosition());
-
+#endif
 
         Debug.Log("Initializing WebView...");
         InitializeWebView(); // Initialize the WebView
@@ -218,7 +219,7 @@ public class MacWebView : MonoBehaviour
         
         Vector2 Screen = new Vector2(1920, 1080);
         Screen = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
-
+        Debug.Log(" Screen in build " + Screen.x + " x " + Screen.y);
         Vector2 screenSize = Screen;
 
 
@@ -239,6 +240,8 @@ public class MacWebView : MonoBehaviour
         Vector2 Screenorg = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
 
         Screen = new Vector2(MyScreen.Width, MyScreen.Height);
+        Debug.Log(" Screen.Width and height " + Screenorg.x + " X " + Screenorg.y);
+        Debug.Log("Editor GameView screen " + Screen.x + "x " + Screen.y);
        
         Vector2 scaleMultiplayer =  Screen/Screenorg;
           scale = scale * scaleMultiplayer;
