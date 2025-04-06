@@ -216,7 +216,17 @@ public class MacWebView : MonoBehaviour
     // NOTE: for historical reasons, `center` means the lower left corner and positive y values extend up.
     public void SetCenterPositionWithScale(Vector2 center, Vector2 scale, Vector2 pivot)
     {
-        
+        // Detect DPI scale (mostly for macOS Retina)
+        float dpiScale = 1f;
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+        dpiScale = UnityEngine.Screen.width / (float)Display.main.systemWidth;
+        Debug.Log("Detected macOS DPI scale: " + dpiScale);
+#endif
+
+        // Correct scale and center based on DPI
+        scale /= dpiScale;
+        center /= dpiScale;
+
         Vector2 Screen = new Vector2(1920, 1080);
         Screen = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
         Debug.Log(" Screen in build " + Screen.x + " x " + Screen.y);
