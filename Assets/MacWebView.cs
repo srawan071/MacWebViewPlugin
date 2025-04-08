@@ -75,7 +75,7 @@ public class MacWebView : MonoBehaviour
     public float x, y, width, height;
     public Vector4 Mask;
     public bool VisibleMask;
-    
+
     void Start()
     {
 # if UNITY_EDITOR
@@ -92,53 +92,53 @@ public class MacWebView : MonoBehaviour
         Debug.Log($"Loading URL: {url}");
         //AddCustomHeader("Authorization", "Bearer " + token );
         LoadURL(url); // Load the URL
-        
-    }
-    
-   void Update()
-    {
-         
-            if (Input.GetKeyDown(KeyCode.Space)) // For debugging, update frame when space is pressed
-            {
-                MatchTextureSizeToRectTransform(webViewRectTransform);
-              
-                UpdateWebViewFrame();
-                // UpdateMask();
 
-            }
-            if (Input.GetKeyDown(KeyCode.M))
-            {
-#if UNITY_EDITOR
-                CheckGameViewPositionAndSize();
-               
-                UpdateWebViewFrame();
-#endif
-            
+    }
+
+    void Update()
+    {
+
+        if (Input.GetKeyDown(KeyCode.Space)) // For debugging, update frame when space is pressed
+        {
+            MatchTextureSizeToRectTransform(webViewRectTransform);
+
+            UpdateWebViewFrame();
+            // UpdateMask();
+            Debug.Log($" Dpiiiiiiiiii {GetPlatformDPIScale()} full stop ");
         }
-        
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+#if UNITY_EDITOR
+            CheckGameViewPositionAndSize();
+
+            UpdateWebViewFrame();
+#endif
+
+        }
+
     }
 
     void UpdateWebViewFrame()
     {
 
-       
-       Debug.Log($"Setting WebView Frame: X={x}, Y={y}, Width={width}, Height={height}");
+
+        Debug.Log($"Setting WebView Frame: X={x}, Y={y}, Width={width}, Height={height}");
         SetWebViewFrame(x, y, width, height); // Set the WebView's position and size
     }
-   void UpdateMask()
+    void UpdateMask()
     {
 #if UNITY_EDITOR
         Rect editorWindowRect = GetEditorWindowRect();
-        Debug.Log(" Editor Window rect"+ editorWindowRect);
+        Debug.Log(" Editor Window rect" + editorWindowRect);
         Rect gameViewRect = CheckGameViewPositionAndSize();
         Mask.x = gameViewRect.x;
         Mask.y = gameViewRect.y;
-        Mask.z = editorWindowRect.size.x - (gameViewRect.size.x+ Mask.x);
-        Mask.w = editorWindowRect.size.y-(gameViewRect.size.y+Mask.y);
-      //  Debug.Log("Ediotr.x " + editorWindowRect.size.x);
-         Debug.Log($" Update Mask {Mask}");
+        Mask.z = editorWindowRect.size.x - (gameViewRect.size.x + Mask.x);
+        Mask.w = editorWindowRect.size.y - (gameViewRect.size.y + Mask.y);
+        //  Debug.Log("Ediotr.x " + editorWindowRect.size.x);
+        Debug.Log($" Update Mask {Mask}");
         Mask += Vector4.one * 50;
-         SetMaskView(Mask.x,Mask.y,Mask.z,Mask.w,VisibleMask);
+        SetMaskView(Mask.x, Mask.y, Mask.z, Mask.w, VisibleMask);
 #endif
     }
 
@@ -146,7 +146,7 @@ public class MacWebView : MonoBehaviour
     {
         if (isWebViewInitialized)
         {
-           // Debug.Log("Destroying WebView...");
+            // Debug.Log("Destroying WebView...");
             DestroyWebView(); // Destroy WebView when application closes
             isWebViewInitialized = false;
         }
@@ -197,12 +197,101 @@ public class MacWebView : MonoBehaviour
 
         return effectiveScale;
     }
+    public static float GetPlatformDPIScale()
+    {
+        float dpi = Screen.dpi;
+
+        // If dpi is 0 or an unexpected value, use default fallback (72 is standard for non-DPI displays)
+        if (dpi == 0)
+        {
+            dpi = 72f;
+        }
+
+        // Platform-specific DPI handling using preprocessor directives
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+        // macOS and macOS Editor (Retina displays logic)
+        if (dpi > 100f)
+        {
+            // For Retina displays, set DPI to 2x base scaling
+            dpi = 2f * 72f;
+        }
+#endif
+
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+        // Windows and Windows Editor (standard DPI handling)
+        if (dpi > 120f)
+        {
+            // Use the native DPI value for high-DPI screens
+            dpi = Screen.dpi;
+        }
+#endif
+        return dpi;
+    }
+
+    public  Rect GetNativeScreenPixelRect(RectTransform rectTransform, Canvas canvas)
+    {
+
+        // Get the world corners of the RectTransform
+        Vector3[] worldCorners = new Vector3[4];
+        rectTransform.GetWorldCorners(worldCorners);
+
+        // Convert world corners to screen space
+        Vector2 bottomLeft = RectTransformUtility.WorldToScreenPoint(canvas.worldCamera, worldCorners[0]);
+        Vector2 topRight = RectTransformUtility.WorldToScreenPoint(canvas.worldCamera, worldCorners[2]);
+
+        // Calculate the width and height of the Rect in screen space
+        float width = topRight.x - bottomLeft.x;
+        float height = topRight.y - bottomLeft.y;
+
+        // Get DPI value
+        float dpi = GetPlatformDPIScale();
+
+        // Apply DPI scaling (using 72 DPI as the base scale factor)
+        float dpiFactor = dpi / 72f;
+        Debug.Log(" Dpi factor is " + dpiFactor);
+        // Modify the Rect based on the DPI factor
+         x = bottomLeft.x * dpiFactor;
+         y = bottomLeft.y * dpiFactor;
+       this. width = width* dpiFactor;
+       this. height = height* dpiFactor;
+
+        // Return the new Rect with modified position and size based on DPI
+        return new Rect(x, y, width, height);
+    }
+
+   
+    public  Rect GetScreenSpaceRect(RectTransform rectTransform, Canvas canvas)
+    {
+        Vector3[] worldCorners = new Vector3[4];
+        rectTransform.GetWorldCorners(worldCorners);
+
+        Vector2 bottomLeft = RectTransformUtility.WorldToScreenPoint(canvas.worldCamera, worldCorners[0]);
+        Vector2 topRight = RectTransformUtility.WorldToScreenPoint(canvas.worldCamera, worldCorners[2]);
+
+        float width = topRight.x - bottomLeft.x;
+        float height = topRight.y - bottomLeft.y;
+
+
+        x = bottomLeft.x;
+        y = bottomLeft.y;
+        this.width = width;
+        this.height = height;
+        return new Rect(bottomLeft.x, bottomLeft.y, width, height);
+    }
+
     public void MatchTextureSizeToRectTransform(RectTransform rectTransform, float quality=1)
     {
         Canvas canvas = rectTransform.GetComponentInParent<Canvas>();
         if (canvas == null)
             return;
+      //  GetScreenSpaceRect(rectTransform, canvas);
+        GetNativeScreenPixelRect(rectTransform, canvas);
+        return;
+
         float scaleFactor = 1f / canvas.transform.localScale.x;
+
+         scaleFactor = 1/canvas.scaleFactor;
+        scaleFactor *= GetPlatformDPIScale();
         //  scaleFactor = 1f / GetCanvasRelativeLocalScale(rectTransform).x;
         Vector2 scale = rectTransform.rect.size * GetCanvasRelativeLocalScale(rectTransform);
         Vector2 center = GetCanvasRelativeLocalPosition(rectTransform) / scaleFactor;
@@ -216,16 +305,7 @@ public class MacWebView : MonoBehaviour
     // NOTE: for historical reasons, `center` means the lower left corner and positive y values extend up.
     public void SetCenterPositionWithScale(Vector2 center, Vector2 scale, Vector2 pivot)
     {
-        // Detect DPI scale (mostly for macOS Retina)
-        float dpiScale = 1f;
-#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-        dpiScale = UnityEngine.Screen.width / (float)Display.main.systemWidth;
-        Debug.Log("Detected macOS DPI scale: " + dpiScale);
-#endif
-
-        // Correct scale and center based on DPI
-        scale /= dpiScale;
-        center /= dpiScale;
+       
 
         Vector2 Screen = new Vector2(1920, 1080);
         Screen = new Vector2(UnityEngine.Screen.width, UnityEngine.Screen.height);
